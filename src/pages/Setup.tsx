@@ -48,17 +48,17 @@ export default function Setup() {
         description="Download the free mt5-rest Expert Advisor from GitHub."
       >
         <a
-          href="https://github.com/mikha-dev/mt5-rest/releases"
+          href="https://github.com/nicholishen/mt5-rest"
           target="_blank"
           rel="noopener noreferrer"
         >
           <Button variant="outline" className="gap-2">
-            <ExternalLink className="h-4 w-4" /> Download from GitHub
+            <ExternalLink className="h-4 w-4" /> View on GitHub
           </Button>
         </a>
         <p className="mt-2 text-xs text-muted-foreground">
-          Download the <code className="rounded bg-secondary px-1">mt5-rest.ex5</code> file from the
-          latest release.
+          Clone or download the repo, then compile the <code className="rounded bg-secondary px-1">mt5-rest.mq5</code> EA in MetaEditor,
+          or copy the pre-compiled <code className="rounded bg-secondary px-1">.ex5</code> file if available.
         </p>
       </Step>
 
