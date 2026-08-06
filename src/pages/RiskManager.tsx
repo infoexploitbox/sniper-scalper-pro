@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ShieldCheck, AlertTriangle, Ban, CheckCircle } from "lucide-react";
+import { getPositions, getAccountInfo, type Position, type AccountInfo } from "@/services/mt5Api";
 
 interface RiskSettings {
   maxDailyLossPercent: number;
@@ -29,13 +30,33 @@ export default function RiskManager() {
     return saved ? JSON.parse(saved) : defaultSettings;
   });
 
-  // Mock daily stats (will be live when connected)
-  const dailyLoss = 0;
-  const openPositionCount = 0;
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [account, setAccount] = useState<AccountInfo | null>(null);
+
+  const fetchData = async () => {
+    try {
+      const pos = await getPositions();
+      setPositions(pos);
+      const acc = await getAccountInfo();
+      setAccount(acc);
+    } catch (e) {
+      console.error("Failed to fetch risk data", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("risk_settings", JSON.stringify(settings));
   }, [settings]);
+
+  // Use live data instead of mock stats
+  const dailyLoss = account?.profit ? (account.profit < 0 ? Math.abs(account.profit) : 0) : 0;
+  const openPositionCount = positions.length;
 
   const update = (key: keyof RiskSettings, value: any) =>
     setSettings((s) => ({ ...s, [key]: value }));

@@ -1,0 +1,22 @@
+# Environment
+.env
+venv/
+env/
+
+# Models and data
+models/
+data/
+*.h5
+*.pkl
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Logs
+*.log
+logs/

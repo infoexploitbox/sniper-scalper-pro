@@ -1,85 +1,88 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getCandles } from "@/services/mt5Api";
-import { analyzeSymbol, type Signal } from "@/services/strategies";
-import { Zap, Play, Loader2, TrendingUp, TrendingDown } from "lucide-react";
+import { getAISignal, getSymbols, type AISignal } from "@/services/mt5Api";
+import { Zap, Play, Loader2, TrendingUp, TrendingDown, Brain, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-const DEFAULT_PAIRS = [
-  "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD",
-  "EURGBP", "EURJPY", "GBPJPY", "XAUUSD", "BTCUSD",
-];
-
 export default function Signals() {
-  const [signals, setSignals] = useState<Signal[]>([]);
+  const [signals, setSignals] = useState<AISignal[]>([]);
   const [scanning, setScanning] = useState(false);
-  const [timeframe, setTimeframe] = useState("M5");
-
-  const pairs = JSON.parse(localStorage.getItem("watched_pairs") || "null") || DEFAULT_PAIRS;
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   const scan = async () => {
     setScanning(true);
-    const newSignals: Signal[] = [];
+    const newSignals: AISignal[] = [];
 
-    for (const symbol of pairs) {
+    let symbols: string[] = [];
+    try {
+      symbols = await getSymbols();
+    } catch (e) {
+      console.error("Failed to fetch symbols", e);
+      symbols = ["EURUSD", "XAUUSD"]; // Fallback
+    }
+
+    for (const symbol of symbols) {
       try {
-        const candles = await getCandles(symbol, timeframe, 100);
-        const signal = analyzeSymbol(symbol, candles, timeframe);
-        if (signal) newSignals.push(signal);
-      } catch {
-        // skip unavailable symbols
+        const signal = await getAISignal(symbol);
+        newSignals.push(signal);
+      } catch (err) {
+        console.error(`Failed to get signal for ${symbol}:`, err);
       }
     }
 
-    setSignals(newSignals.sort((a, b) => b.confluenceScore - a.confluenceScore));
+    setSignals(newSignals.sort((a, b) => b.confidence - a.confidence));
     setScanning(false);
 
-    if (newSignals.length === 0) {
-      toast.info("No signals found on current scan");
-    } else {
-      toast.success(`Found ${newSignals.length} signal(s)`);
+    const tradeable = newSignals.filter(s => s.signal !== "HOLD" && s.confidence > 0.6);
+    if (tradeable.length > 0) {
+      toast.success(`Found ${tradeable.length} high-confidence signal(s)`);
     }
   };
 
-  const confluenceColor = (score: number) => {
-    if (score >= 4) return "text-profit";
-    if (score >= 3) return "text-warning";
-    if (score >= 2) return "text-info";
+  useEffect(() => {
+    scan();
+    if (autoRefresh) {
+      const interval = setInterval(scan, 60000); // Refresh every minute
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh]);
+
+  const confidenceColor = (confidence: number) => {
+    if (confidence >= 0.8) return "text-profit";
+    if (confidence >= 0.6) return "text-warning";
     return "text-muted-foreground";
   };
 
-  const confluenceLabel = (score: number) => {
-    if (score >= 4) return "🎯 SNIPER";
-    if (score >= 3) return "🔥 STRONG";
-    if (score >= 2) return "⚡ MODERATE";
-    return "📊 WEAK";
+  const confidenceLabel = (confidence: number) => {
+    if (confidence >= 0.8) return "🎯 VERY HIGH";
+    if (confidence >= 0.6) return "🔥 HIGH";
+    if (confidence >= 0.4) return "⚡ MEDIUM";
+    return "📊 LOW";
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Signal Engine</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Brain className="h-6 w-6 text-primary" />
+            AI Signals
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Multi-strategy confluence scanner
+            Neural network predictions for multiple symbols
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value)}
-            className="rounded-md border border-border bg-secondary px-3 py-2 text-sm"
+          <Button
+            variant={autoRefresh ? "default" : "outline"}
+            size="sm"
+            onClick={() => setAutoRefresh(!autoRefresh)}
           >
-            <option value="M1">M1</option>
-            <option value="M5">M5</option>
-            <option value="M15">M15</option>
-            <option value="M30">M30</option>
-            <option value="H1">H1</option>
-            <option value="H4">H4</option>
-            <option value="D1">D1</option>
-          </select>
+            <RefreshCw className={`h-4 w-4 mr-2 ${autoRefresh ? "animate-spin" : ""}`} />
+            Auto
+          </Button>
           <Button onClick={scan} disabled={scanning} className="gap-2">
             {scanning ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -91,16 +94,19 @@ export default function Signals() {
         </div>
       </div>
 
-      {/* Strategy Legend */}
-      <Card>
-        <CardContent className="flex flex-wrap gap-3 py-4">
-          <Badge variant="outline" className="text-xs">EMA 9/21</Badge>
-          <Badge variant="outline" className="text-xs">RSI + S/R</Badge>
-          <Badge variant="outline" className="text-xs">SMC (FVG+BOS)</Badge>
-          <Badge variant="outline" className="text-xs">Price Action</Badge>
-          <span className="ml-auto text-xs text-muted-foreground">
-            Confluence = strategies agreeing on direction
-          </span>
+      {/* Info Card */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="flex items-center gap-3 py-4">
+          <Brain className="h-5 w-5 text-primary" />
+          <div className="flex-1">
+            <p className="text-sm font-medium">AI-Powered Analysis</p>
+            <p className="text-xs text-muted-foreground">
+              Signals generated by trained neural network using 20+ technical indicators
+            </p>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            Confidence Threshold: 60%
+          </Badge>
         </CardContent>
       </Card>
 
@@ -110,18 +116,18 @@ export default function Signals() {
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Zap className="mb-4 h-12 w-12 text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">
-              No signals yet. Click "Scan Now" to analyze the market.
+              Loading AI signals...
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {signals.map((signal) => (
-            <Card key={signal.id} className="overflow-hidden">
+            <Card key={signal.symbol} className="overflow-hidden">
               <div
-                className={`h-1 ${
-                  signal.direction === "BUY" ? "bg-profit" : "bg-loss"
-                }`}
+                className={`h-1 ${signal.signal === "BUY" ? "bg-profit" :
+                    signal.signal === "SELL" ? "bg-loss" : "bg-muted"
+                  }`}
               />
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -130,54 +136,65 @@ export default function Signals() {
                       {signal.symbol}
                     </span>
                     <Badge
-                      variant="outline"
+                      variant={signal.signal === "HOLD" ? "secondary" : "outline"}
                       className={
-                        signal.direction === "BUY"
+                        signal.signal === "BUY"
                           ? "border-profit/30 text-profit"
-                          : "border-loss/30 text-loss"
+                          : signal.signal === "SELL"
+                            ? "border-loss/30 text-loss"
+                            : ""
                       }
                     >
-                      {signal.direction === "BUY" ? (
-                        <TrendingUp className="mr-1 h-3 w-3" />
-                      ) : (
-                        <TrendingDown className="mr-1 h-3 w-3" />
-                      )}
-                      {signal.direction}
+                      {signal.signal === "BUY" && <TrendingUp className="mr-1 h-3 w-3" />}
+                      {signal.signal === "SELL" && <TrendingDown className="mr-1 h-3 w-3" />}
+                      {signal.signal}
                     </Badge>
                   </div>
-                  <span className={`text-sm font-bold ${confluenceColor(signal.confluenceScore)}`}>
-                    {confluenceLabel(signal.confluenceScore)}
+                  <span className={`text-sm font-bold ${confidenceColor(signal.confidence)}`}>
+                    {confidenceLabel(signal.confidence)}
                   </span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex flex-wrap gap-1.5">
-                  {signal.strategies.map((s) => (
-                    <Badge key={s} variant="secondary" className="text-xs">
-                      {s}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="grid grid-cols-4 gap-2 rounded-lg bg-secondary p-3 text-xs font-mono">
-                  <div>
-                    <p className="text-muted-foreground">Entry</p>
-                    <p className="font-medium">{signal.entryPrice.toFixed(5)}</p>
+                <div className="rounded-lg bg-secondary p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-muted-foreground">AI Confidence</span>
+                    <span className={`text-sm font-bold font-mono ${confidenceColor(signal.confidence)}`}>
+                      {(signal.confidence * 100).toFixed(1)}%
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">SL</p>
-                    <p className="text-loss">{signal.sl.toFixed(5)}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">TP</p>
-                    <p className="text-profit">{signal.tp.toFixed(5)}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">R:R</p>
-                    <p className="font-medium">1:{signal.riskReward.toFixed(1)}</p>
+                  <div className="h-2 bg-background rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${signal.confidence >= 0.6 ? "bg-profit" : "bg-muted-foreground"
+                        }`}
+                      style={{ width: `${signal.confidence * 100}%` }}
+                    />
                   </div>
                 </div>
+
+                {signal.signal !== "HOLD" && signal.sl && signal.tp && (
+                  <div className="grid grid-cols-4 gap-2 rounded-lg bg-secondary p-3 text-xs font-mono">
+                    <div>
+                      <p className="text-muted-foreground">Entry</p>
+                      <p className="font-medium">{signal.current_price.toFixed(5)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">SL</p>
+                      <p className="text-loss">{signal.sl.toFixed(5)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">TP</p>
+                      <p className="text-profit">{signal.tp.toFixed(5)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">ATR</p>
+                      <p className="font-medium">{signal.atr.toFixed(5)}</p>
+                    </div>
+                  </div>
+                )}
+
                 <p className="text-[10px] text-muted-foreground font-mono">
-                  {signal.timeframe} • {signal.timestamp.toLocaleTimeString()}
+                  {new Date(signal.timestamp).toLocaleString()}
                 </p>
               </CardContent>
             </Card>

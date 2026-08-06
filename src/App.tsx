@@ -11,6 +11,7 @@ import RiskManager from "@/pages/RiskManager";
 import Journal from "@/pages/Journal";
 import SettingsPage from "@/pages/SettingsPage";
 import Setup from "@/pages/Setup";
+import Backtest from "@/pages/Backtest";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/risk" element={<RiskManager />} />
             <Route path="/journal" element={<Journal />} />
+            <Route path="/backtest" element={<Backtest />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/setup" element={<Setup />} />
             <Route path="*" element={<NotFound />} />

@@ -183,3 +183,144 @@ export async function testConnection(): Promise<{
     return { connected: false, error: err.message };
   }
 }
+
+export const getBacktestHistory = async (limit: number = 50): Promise<any[]> => {
+  try {
+    return await apiFetch<any[]>(`/backtests?limit=${limit}`);
+  } catch (error) {
+    console.error("Error fetching backtest history:", error);
+    return [];
+  }
+};
+
+export const getBacktestLogs = async (): Promise<{ logs: string[]; status: { running: boolean; symbol: string; message: string } }> => {
+  try {
+    return await apiFetch<{ logs: string[]; status: { running: boolean; symbol: string; message: string } }>("/backtest/logs");
+  } catch (error) {
+    return { logs: [], status: { running: false, symbol: "", message: "Failed to connect to API" } };
+  }
+};
+
+
+// ─── AI Bot Endpoints ──────────────────────────────────
+export interface AISignal {
+  symbol: string;
+  signal: "BUY" | "SELL" | "HOLD";
+  confidence: number;
+  current_price: number;
+  atr: number;
+  sl?: number;
+  tp?: number;
+  timestamp: string;
+}
+
+export interface BotStatus {
+  is_running: boolean;
+  connected: boolean;
+  model_loaded: boolean;
+  config: {
+    symbol: string;
+    timeframe: string;
+    lot_size: number;
+    max_positions: number;
+    max_risk_percent: number;
+  };
+  statistics: {
+    total_trades: number;
+    avg_confidence: number;
+    last_trade?: string;
+  };
+  model_performance: {
+    latest_accuracy?: number;
+    latest_loss?: number;
+    training_count?: number;
+    last_trained?: string;
+  };
+}
+
+export async function getAISignal(symbol: string): Promise<AISignal> {
+  return apiFetch<AISignal>(`/analyze?symbol=${symbol}`);
+}
+
+export async function getBotStatus(): Promise<BotStatus> {
+  return apiFetch<BotStatus>("/bot/status");
+}
+
+export async function startBot(): Promise<{ success: boolean; message: string }> {
+  return apiFetch<{ success: boolean; message: string }>("/bot/start", { method: "POST" });
+}
+
+export async function stopBot(): Promise<{ success: boolean; message: string }> {
+  return apiFetch<{ success: boolean; message: string }>("/bot/stop", { method: "POST" });
+}
+
+export interface BacktestRequest {
+  symbol: string;
+  initial_balance: number;
+  months: number;
+  timeframe: string;
+  risk_percent?: number;
+}
+
+export interface BacktestRegimeStat {
+  regime: string;
+  total: number;
+  wins: number;
+  win_rate: number;
+  profit: number;
+}
+
+export interface BacktestTrade {
+  symbol: string;
+  type: "BUY" | "SELL";
+  entry: number;
+  exit: number;
+  volume: number;
+  profit: number;
+  balance_before?: number;
+  balance_after?: number;
+  open_time: string;
+  close_time: string;
+  confidence: number;
+  regime?: string;
+  reason: string;
+}
+
+export interface EquityPoint {
+  time: string | number;
+  balance: number;
+  equity: number;
+}
+
+export interface BacktestResult {
+  success: boolean;
+  symbol: string;
+  initial_balance: number;
+  final_balance: number;
+  total_profit: number;
+  return_percent: number;
+  max_drawdown_percent: number;
+  profit_factor: number;
+  total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
+  win_rate: number;
+  avg_win: number;
+  avg_loss: number;
+  best_trade: number;
+  worst_trade: number;
+  avg_trade_duration?: number;
+  equity_curve: EquityPoint[];
+  regime_stats: BacktestRegimeStat[];
+  reason_stats: Record<string, number>;
+  trades: BacktestTrade[];
+  timestamp?: string;
+}
+
+export async function runBacktest(params: BacktestRequest): Promise<BacktestResult> {
+  return apiFetch<BacktestResult>(
+    `/backtest/run?symbol=${params.symbol}&initial_balance=${params.initial_balance}&months=${params.months}&timeframe=${params.timeframe}&risk_percent=${params.risk_percent || 5}`,
+    { method: "POST" }
+  );
+}
+

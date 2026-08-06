@@ -22,3 +22,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment & Sensitive files
+.env
+trading_bot/.env
+*.env.local
+*.env.*.local
+
+# Python & ML
+__pycache__/
+*.py[cod]
+*$py.class
+*.pkl
+*.h5
+*.db
+
+# Data & Models
+trading_bot/data/
+trading_bot/models/
+scratch*/
+get-pip.py

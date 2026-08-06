@@ -34,100 +34,71 @@ export default function Setup() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">MT5 Setup Guide</h1>
+        <h1 className="text-2xl font-bold">Python AI Bot Setup</h1>
         <p className="text-sm text-muted-foreground">
-          Connect your MetaTrader 5 to the trading bot in 4 steps
+          Connect your MetaTrader 5 to the AI trading bot in 3 easy steps
         </p>
       </div>
 
       {/* Steps */}
       <Step
         number={1}
-        title="Download mt5-rest EA"
+        title="Install Python Dependencies"
         icon={Download}
-        description="Download the free mt5-rest Expert Advisor from GitHub."
+        description="Make sure Python is installed and dependencies are ready."
       >
-        <a
-          href="https://github.com/nicholishen/mt5-rest"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Button variant="outline" className="gap-2">
-            <ExternalLink className="h-4 w-4" /> View on GitHub
-          </Button>
-        </a>
+        <div className="rounded-lg bg-secondary p-4 font-mono text-xs leading-relaxed">
+          <p className="text-muted-foreground">Run in your project folder:</p>
+          <p className="mt-1 text-foreground">cd trading_bot</p>
+          <p className="mt-1 text-foreground">pip install -r requirements.txt</p>
+        </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Clone or download the repo, then compile the <code className="rounded bg-secondary px-1">mt5-rest.mq5</code> EA in MetaEditor,
-          or copy the pre-compiled <code className="rounded bg-secondary px-1">.ex5</code> file if available.
+          ✅ Already done if you ran the setup! The bot includes MetaTrader5, TensorFlow, and all ML libraries.
         </p>
       </Step>
 
       <Step
         number={2}
-        title="Install into MT5"
-        icon={FolderOpen}
-        description="Copy the EA file into your MetaTrader 5 Experts folder."
+        title="Configure MT5 Credentials"
+        icon={Settings}
+        description="Edit the .env file with your MT5 account details."
       >
         <div className="rounded-lg bg-secondary p-4 font-mono text-xs leading-relaxed">
-          <p className="text-muted-foreground">Copy to this folder:</p>
-          <p className="mt-1 text-foreground">
-            C:\Users\[YourName]\AppData\Roaming\MetaQuotes\Terminal\[ID]\MQL5\Experts\
-          </p>
-          <p className="mt-3 text-muted-foreground">Or in MT5:</p>
-          <p className="mt-1 text-foreground">File → Open Data Folder → MQL5 → Experts</p>
+          <p className="text-muted-foreground">File: trading_bot/.env</p>
+          <p className="mt-2 text-foreground">MT5_LOGIN=your_account_number</p>
+          <p className="text-foreground">MT5_PASSWORD=your_password</p>
+          <p className="text-foreground">MT5_SERVER=your_broker_server</p>
+          <p className="mt-2 text-foreground">SYMBOLS=EURUSD,XAUUSD</p>
+          <p className="text-foreground">MAX_POSITIONS=5</p>
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          ✅ Already configured! The bot will trade EURUSD and Gold (XAUUSD).
+        </p>
       </Step>
 
       <Step
         number={3}
-        title="Enable & Configure"
-        icon={Settings}
-        description="Enable the EA in MetaTrader 5 settings."
-      >
-        <ol className="space-y-2 text-sm text-muted-foreground">
-          <li className="flex gap-2">
-            <span className="font-mono text-foreground">1.</span>
-            In MT5, go to <strong className="text-foreground">Tools → Options → Expert Advisors</strong>
-          </li>
-          <li className="flex gap-2">
-            <span className="font-mono text-foreground">2.</span>
-            Check <strong className="text-foreground">"Allow Algo Trading"</strong>
-          </li>
-          <li className="flex gap-2">
-            <span className="font-mono text-foreground">3.</span>
-            Check <strong className="text-foreground">"Allow WebRequest for listed URL"</strong>
-          </li>
-          <li className="flex gap-2">
-            <span className="font-mono text-foreground">4.</span>
-            Restart MT5 or right-click Navigator → Refresh
-          </li>
-        </ol>
-      </Step>
-
-      <Step
-        number={4}
-        title="Attach to Chart & Run"
+        title="Start the Bot"
         icon={Play}
-        description="Drag the EA onto any chart to start the REST server."
+        description="Double-click START_BOTH.bat to launch the bot and API server."
       >
-        <ol className="space-y-2 text-sm text-muted-foreground">
-          <li className="flex gap-2">
-            <span className="font-mono text-foreground">1.</span>
-            Open any chart (e.g. EURUSD)
-          </li>
-          <li className="flex gap-2">
-            <span className="font-mono text-foreground">2.</span>
-            In Navigator panel, find <strong className="text-foreground">mt5-rest</strong> under Expert Advisors
-          </li>
-          <li className="flex gap-2">
-            <span className="font-mono text-foreground">3.</span>
-            Drag it onto the chart. Set port to <strong className="text-foreground">6542</strong> (default)
-          </li>
-          <li className="flex gap-2">
-            <span className="font-mono text-foreground">4.</span>
-            Click OK. You should see a smiley face 😊 in the top-right corner of the chart
-          </li>
-        </ol>
+        <div className="space-y-3">
+          <div className="rounded-lg border bg-background p-3">
+            <p className="text-sm font-medium">START_BOTH.bat</p>
+            <p className="text-xs text-muted-foreground">Runs both API server and auto-trading bot</p>
+          </div>
+          <div className="rounded-lg border bg-background p-3">
+            <p className="text-sm font-medium">START_TRADING_BOT.bat</p>
+            <p className="text-xs text-muted-foreground">Only auto-trading (no API)</p>
+          </div>
+          <div className="rounded-lg border bg-background p-3">
+            <p className="text-sm font-medium">START_API_SERVER.bat</p>
+            <p className="text-xs text-muted-foreground">Only API server (manual control)</p>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          The bot will connect to MT5, train AI models for each symbol, and start trading automatically!
+        </p>
       </Step>
 
       {/* Connection Test */}
@@ -149,11 +120,10 @@ export default function Setup() {
 
           {result && (
             <div
-              className={`rounded-lg border p-4 ${
-                result.connected
+              className={`rounded-lg border p-4 ${result.connected
                   ? "border-profit/30 bg-profit/5"
                   : "border-loss/30 bg-loss/5"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2">
                 {result.connected ? (

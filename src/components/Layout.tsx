@@ -12,12 +12,14 @@ import {
   X,
   Activity,
   TrendingUp,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
   { path: "/signals", label: "Signals", icon: Zap },
+  { path: "/backtest", label: "Backtest", icon: Target },
   { path: "/calculator", label: "Calculator", icon: Calculator },
   { path: "/risk", label: "Risk Manager", icon: ShieldCheck },
   { path: "/journal", label: "Journal", icon: BookOpen },

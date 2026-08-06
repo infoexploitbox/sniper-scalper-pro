@@ -7,8 +7,12 @@ import {
   getPositions,
   closePosition,
   testConnection,
+  getBotStatus,
+  startBot,
+  stopBot,
   type AccountInfo,
   type Position,
+  type BotStatus,
 } from "@/services/mt5Api";
 import {
   DollarSign,
@@ -19,6 +23,11 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
+  Bot,
+  Brain,
+  Target,
+  Play,
+  Square,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,7 +35,33 @@ export default function Dashboard() {
   const [connected, setConnected] = useState(false);
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isBotLoading, setIsBotLoading] = useState(false);
+
+  const handleStartBot = async () => {
+    setIsBotLoading(true);
+    try {
+      const res = await startBot();
+      toast.success(res.message);
+      await refresh();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+    setIsBotLoading(false);
+  };
+
+  const handleStopBot = async () => {
+    setIsBotLoading(true);
+    try {
+      const res = await stopBot();
+      toast.success(res.message);
+      await refresh();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+    setIsBotLoading(false);
+  };
 
   const refresh = async () => {
     setLoading(true);
@@ -37,6 +72,8 @@ export default function Dashboard() {
       try {
         const pos = await getPositions();
         setPositions(pos);
+        const status = await getBotStatus();
+        setBotStatus(status);
       } catch { /* empty */ }
     }
     setLoading(false);
@@ -93,12 +130,86 @@ export default function Dashboard() {
           <CardContent className="flex items-center gap-3 py-4">
             <WifiOff className="h-5 w-5 text-destructive" />
             <div>
-              <p className="text-sm font-medium">MT5 not connected</p>
+              <p className="text-sm font-medium">API Server not connected</p>
               <p className="text-xs text-muted-foreground">
-                Make sure MT5 is running with the mt5-rest EA. Go to{" "}
-                <a href="/setup" className="text-primary underline">MT5 Setup</a> for instructions.
+                Make sure the API server is running. Double-click START_BOTH.bat or START_API_SERVER.bat to start.
               </p>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI Bot Status */}
+      {connected && botStatus && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bot className={`h-5 w-5 ${botStatus.is_running ? "text-primary" : "text-muted-foreground"}`} />
+                <CardTitle className="text-base">AI Trading Bot</CardTitle>
+                <Badge variant={botStatus.is_running ? "default" : "secondary"} className="ml-2 gap-1.5">
+                  <Brain className="h-3 w-3" />
+                  {botStatus.is_running ? "Running" : "Stopped"}
+                </Badge>
+              </div>
+              
+              {botStatus.is_running ? (
+                <Button size="sm" variant="destructive" onClick={handleStopBot} disabled={isBotLoading}>
+                  {isBotLoading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Square className="mr-2 h-4 w-4" />}
+                  Stop Bot
+                </Button>
+              ) : (
+                <Button size="sm" variant="default" onClick={handleStartBot} disabled={isBotLoading}>
+                  {isBotLoading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+                  Start Bot
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-lg border bg-background p-3">
+                <p className="text-xs text-muted-foreground">Symbols</p>
+                <p className="font-mono text-sm font-medium">
+                  {botStatus.config.symbol || "EURUSD, XAUUSD"}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-background p-3">
+                <p className="text-xs text-muted-foreground">Timeframe</p>
+                <p className="font-mono text-sm font-medium">{botStatus.config.timeframe}</p>
+              </div>
+              <div className="rounded-lg border bg-background p-3">
+                <p className="text-xs text-muted-foreground">Max Risk</p>
+                <p className="font-mono text-sm font-medium">{botStatus.config.max_risk_percent}%</p>
+              </div>
+              <div className="rounded-lg border bg-background p-3">
+                <p className="text-xs text-muted-foreground">Max Positions</p>
+                <p className="font-mono text-sm font-medium">{botStatus.config.max_positions}</p>
+              </div>
+            </div>
+            {botStatus.model_performance?.latest_accuracy && (
+              <div className="flex items-center gap-4 rounded-lg border bg-background p-3">
+                <Target className="h-4 w-4 text-primary" />
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Model Accuracy</p>
+                  <p className="font-mono text-sm font-medium">
+                    {(botStatus.model_performance?.latest_accuracy * 100).toFixed(1)}%
+                  </p>
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Total Trades</p>
+                  <p className="font-mono text-sm font-medium">
+                    {botStatus.statistics?.total_trades || 0}
+                  </p>
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Avg Confidence</p>
+                  <p className="font-mono text-sm font-medium">
+                    {botStatus.statistics?.avg_confidence ? (botStatus.statistics.avg_confidence * 100).toFixed(0) : 0}%
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -185,9 +296,8 @@ export default function Dashboard() {
                       <td className="py-3 pr-4 font-mono text-muted-foreground">{pos.sl || "—"}</td>
                       <td className="py-3 pr-4 font-mono text-muted-foreground">{pos.tp || "—"}</td>
                       <td
-                        className={`py-3 pr-4 font-mono font-medium ${
-                          pos.profit >= 0 ? "text-profit" : "text-loss"
-                        }`}
+                        className={`py-3 pr-4 font-mono font-medium ${pos.profit >= 0 ? "text-profit" : "text-loss"
+                          }`}
                       >
                         ${pos.profit.toFixed(2)}
                       </td>
